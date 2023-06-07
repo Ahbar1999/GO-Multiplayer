@@ -3,19 +3,24 @@ import pygame
 import socket
 import json
 import time
-import sys
+# import sys
+import argparse
 
 # pygame setup
 pygame.init()
 screen = pygame.display.set_mode((480, 360))
 font = pygame.font.SysFont('roboto', 40)
-
 clock = pygame.time.Clock()
+# socket setup
 HOST_IP = "127.0.0.1"
 HOST_PORT = 3000
 CURRENT_IP = "127.0.0.1"
 CURRENT_PORT = 3001
 RECV_BUF_SIZE = 2048 
+# args setup
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', '--id')
+parser.add_argument('-p', '--port')
 
 player_pos = pygame.Vector2(400 / 2, 200 / 2)
 
@@ -68,23 +73,22 @@ def update_game(dt):
     return True
 
 if __name__ == '__main__':
+    
+    # check if any cli args was provided
+    args = vars(parser.parse_args()) 
+    if args:
+        print(args)
+        if args["id"]:
+            this_player["id"] = int(args["id"])
+        if args["port"]:
+            CURRENT_PORT = int(args["port"])
+    # create socket
     sock = socket.socket(socket.AF_INET, # Internet
                          socket.SOCK_DGRAM) # UDP
-    # bind to current port
-    try:
-        sock.bind((CURRENT_IP, CURRENT_PORT))
-    except OSError:
-        CURRENT_PORT += 1
-        sock.bind((CURRENT_IP, CURRENT_PORT))
-        this_player["udp_addr"] = CURRENT_IP + ":" + str(CURRENT_PORT)
-
-    # check if id was provided
-    if len(sys.argv) != 0:
-        try:
-            this_player["id"] = int(sys.argv[0])
-        except ValueError:
-            print("Either provide a proper numeric argument for id or dont provide one at all")
-
+    # update addr   
+    this_player["udp_addr"] = CURRENT_IP + ":" + str(CURRENT_PORT)
+    sock.bind((CURRENT_IP, CURRENT_PORT))
+   
     dt = 0
     # initiate connection
     while this_player["id"] is None:
@@ -105,27 +109,27 @@ if __name__ == '__main__':
     while running:
         running = update_game(dt)
         curr_time = time.time() 
-        if curr_time - start_time >= 2.0:
-            # send this data
-            send_payload = json.dumps(this_player).encode()
-            # print(curr_time - begin_time, send_payload)
-            sock.sendto(send_payload, (HOST_IP, HOST_PORT))
-            
-            start_time = curr_time 
-            
-            # recv other data, if data is not immediately available then recvfrom throws an exception
-            # we dont care about that exception so we just continue
-            try:
-                data, addr = sock.recvfrom(RECV_BUF_SIZE)
-                # update world info
-                data = json.loads(data.decode())
-                other_players[data["id"]] = data
-                print(this_player["id"], other_players)
-            finally:
-                continue
+        # if curr_time - start_time >= 0.05:
+        # send this data
+        send_payload = json.dumps(this_player).encode()
+        # print(curr_time - begin_time, send_payload)
+        sock.sendto(send_payload, (HOST_IP, HOST_PORT))
+        
+        start_time = curr_time 
+        
+        dt = clock.tick(60) / 1000
+        # recv other data, if data is not immediately available then recvfrom throws an exception
+        # we dont care about that exception so we just continue
+        try:
+            data, addr = sock.recvfrom(RECV_BUF_SIZE)
+            # update world info
+            data = json.loads(data.decode())
+            other_players[data["id"]] = data
+            print(this_player["id"], other_players)
+        finally:
+            continue 
         # print(this_player["id"], other_players)
         # print(other_players) 
-        dt = clock.tick(60) / 1000
     
     pygame.quit()
 
