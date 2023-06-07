@@ -52,7 +52,7 @@ func monitor(conn *net.UDPConn, players *map[string]Player, done chan bool) {
 	
 	// 4MB buffer
 	var payload []byte
-	var id byte = 0 
+	var id int = 0 
 	
 	fmt.Println("Entered monitor()")
 	for {			
@@ -74,7 +74,9 @@ func monitor(conn *net.UDPConn, players *map[string]Player, done chan bool) {
 		
 		if string(payload) == "Join" {
 			// new player, waiting for connection
-			sendResponseToUdp(conn, remoteAddr, []byte{id})
+			newId, _ := json.Marshal(id)
+
+			sendResponseToUdp(conn, remoteAddr, newId)
 			id += 1
 		} else {
 			var p Player 

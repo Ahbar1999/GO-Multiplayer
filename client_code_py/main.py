@@ -1,4 +1,4 @@
-# Example file showing a circle moving on screen
+
 # import pygame
 import socket
 import json
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     sock.bind((CURRENT_IP, CURRENT_PORT))
 
     # initiate connection
-    while not this_player["id"]:
+    while this_player["id"] is None:
         sock.sendto("Join".encode(), (HOST_IP, HOST_PORT)) 
         data, addr = sock.recvfrom(RECV_BUF_SIZE)
         if data:
@@ -70,22 +70,27 @@ if __name__ == '__main__':
     print("Id recvd for player: ", this_player["id"])
 
     running = True
-    start_time = time.time()
-
+    begin_time = time.time()
+    start_time = begin_time 
+    # non blocking socket
+    sock.setblocking(False)
+    
     while True:
-        print("In the loop")
         # running = update_game(dt)
         curr_time = time.time() 
         if curr_time - start_time >= 2.0:
-            start_time = curr_time 
             # send this data
             send_payload = json.dumps(this_player).encode()
-            print(curr_time, send_payload)
+            print(curr_time - begin_time, send_payload)
             sock.sendto(send_payload, (HOST_IP, HOST_PORT))
             
+            start_time = curr_time 
             # recv other data
-            data, addr = sock.recvfrom(RECV_BUF_SIZE)
-
+            try:
+                data, addr = sock.recvfrom(RECV_BUF_SIZE)
+            finally:
+                continue
+            
         # print(other_players) 
         # dt = clock.tick(60) / 1000
 
