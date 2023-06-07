@@ -28,7 +28,7 @@ func startClient() {
 	}	
 
 	// this player
-	thisPlayer := Player{currAddr.String(), [2]int{0, 0}, uuid.NewString()}
+	thisPlayer := Player{currAddr.String(), [2]float32{0, 0}, uuid.NewString()}
 	
 	conn, err = net.DialUDP("udp", &currAddr, &hostAddr)
 	if err != nil {	 
@@ -39,7 +39,7 @@ func startClient() {
 	msg := make([]byte, 2048)
 	
 	// on startup 
-	send, _ := json.Marshal(Player{ currAddr.String(), [2]int{0, 0}, "None"})	
+	send, _ := json.Marshal(Player{ currAddr.String(), [2]float32{0, 0}, "None"})	
 	_, err = conn.Write(send)
 	
 	if err != nil {	 

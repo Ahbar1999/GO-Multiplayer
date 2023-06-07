@@ -18,7 +18,7 @@ type Game struct {
 
 type Player struct {
 	UDPAddr string 	`json:"udp_addr"` 
-	Pos [2]int		`json:"pos"`
+	Pos [2]float32	`json:"pos"`
 	Id string		`json:"id"`
 }
 
@@ -41,23 +41,25 @@ func startUDPServer(port int) (*net.UDPConn, error) {
 }
 
 func sendResponseToUdp(conn *net.UDPConn, remoteAddr *net.UDPAddr, payload []byte) {
-	_, _, err := conn.WriteMsgUDP(payload, nil, remoteAddr)
+	n, _, err := conn.WriteMsgUDP(payload, nil, remoteAddr)
 	
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not send data to %v: error: %v", remoteAddr.String(), err)
 	}
+	fmt.Println(n, "Bytes written to: ", remoteAddr.String())
 }
 
 
 func monitor(conn *net.UDPConn, players *map[string]Player, done chan bool) {
 	
-	// 4MB buffer
 	var payload []byte
 	var id int = 0 
 	
 	fmt.Println("Entered monitor()")
-	for {			
+	for {
+		// 2MB recv buffer
 		payload = make([]byte, 2048)
+
 		n, remoteAddr, err := conn.ReadFromUDP(payload)		
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not read from connection: %v, error: %v\n", remoteAddr.String(), err)
@@ -71,7 +73,7 @@ func monitor(conn *net.UDPConn, players *map[string]Player, done chan bool) {
 
 		payload = bytes.Trim(payload, "\x00")
 
-		fmt.Fprintf(os.Stdout, "Message recieved from connection %v : %v \n", remoteAddr.String(), string(payload))	
+		// fmt.Fprintf(os.Stdout, "Message recieved from connection %v : %v \n", remoteAddr.String(), string(payload))	
 		
 		if string(payload) == "Join" {
 			// new player, waiting for connection
@@ -93,18 +95,21 @@ func monitor(conn *net.UDPConn, players *map[string]Player, done chan bool) {
 			(*players)[p.Id] = p
 			
 			fmt.Println("Player pool: ", *players)
-
-			msg, err := json.Marshal(*players)
+			
+			// prepare to send this players coords to others
+			msg, err := json.Marshal((*players)[p.Id])
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not Marshal Players: error %v", err)
 			}	
 
 			// broadcast message
-			for _, player := range *players {
-				if player.Id == p.Id {
+			for id, player := range *players {
+				if id == p.Id {
 					continue	
 				}
 				playerRemoteAddr, err := net.ResolveUDPAddr("udp", player.UDPAddr)
+
+				fmt.Println("Sending Player: ", p.Id, "'s data to ", playerRemoteAddr.String()) 
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not resolve remote addr of %v error %v", player, err)
 				}
