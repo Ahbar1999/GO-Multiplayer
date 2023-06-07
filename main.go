@@ -12,7 +12,8 @@ import (
 type Game struct {
 	P1 Player 
 	P2 Player 
-	Id string 
+	Id string
+	//TODO: add timestamp field, this will allow us to detect users that have disconnected 
 } 
 
 type Player struct {
